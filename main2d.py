@@ -24,6 +24,7 @@ SIMULATION_TIME_STEP: float = 0.0001  # Smaller steps in time allows for more ac
 MAX_STEPS_PER_LOOP: int = 2000  # A safeguard to slow down the program if it's running too slow
 simulation_time_s: float = 0  # The time, in seconds, since the simulation began
 start_time_s: float = time.perf_counter()
+SIMULATION_SPEED: float = 0.1
 
 # Constants pertaining to drawing the continuous function
 FUNCTION_DETAIL: float = 0.001
@@ -51,17 +52,19 @@ if __name__ == "__main__":
 
     # Main loop
     points, = plt.plot(0, 0, 'r')
+    start_time_s: float = time.perf_counter()
     while plt.fignum_exists(fig.number):
         current_time_s: float = time.perf_counter()
-        required_steps: int = int((current_time_s - simulation_time_s - start_time_s)/SIMULATION_TIME_STEP)
+        required_steps: int = int((current_time_s - simulation_time_s*SIMULATION_SPEED - start_time_s)
+                                  / SIMULATION_TIME_STEP)
         if required_steps >= MAX_STEPS_PER_LOOP:
             print(f"Warning, hit step maximum ({required_steps} required vs max of {MAX_STEPS_PER_LOOP})")
             required_steps = 1000
-        simulation_time_s += required_steps*SIMULATION_TIME_STEP
+        simulation_time_s += required_steps*SIMULATION_TIME_STEP/SIMULATION_SPEED
         for i in range(required_steps):
             simulated_points[:, 2] = differential_eq(simulated_points[:, 0], simulated_points[:, 1])
-            simulated_points[:, 0] += simulated_points[:, 1]*SIMULATION_TIME_STEP
-            simulated_points[:, 1] += simulated_points[:, 2]*SIMULATION_TIME_STEP
+            simulated_points[:, 0] += simulated_points[:, 1]*SIMULATION_TIME_STEP*SIMULATION_SPEED
+            simulated_points[:, 1] += simulated_points[:, 2]*SIMULATION_TIME_STEP*SIMULATION_SPEED
 
         points.remove()
         points, = plt.plot(simulated_points[:, 0], main_function(simulated_points[:, 0]), 'ro')
