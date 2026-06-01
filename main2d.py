@@ -21,10 +21,15 @@ differential_eq: np.ufunc = lambda x, v: (-v*FRICTION - GRAVITY*np.sin(np.atan(m
 simulated_points: npt.NDArray[np.float64] = np.array([[0.0, 0.0, 0.0],
                                                       [-1.0, 10.0, 0.0]])
 SIMULATION_TIME_STEP: float = 0.0001  # Smaller steps in time allows for more accuracy, at the cost of processing power
-MAX_STEPS_PER_LOOP: int = 2000  # A safeguard to slow down the program if it's running too slow
+MAX_STEPS_PER_LOOP: int = 2500  # A safeguard to slow down the program if it's running too slow
 simulation_time_s: float = 0  # The time, in seconds, since the simulation began
 start_time_s: float = time.perf_counter()
 SIMULATION_SPEED: float = 0.1
+
+# Vectors
+VECTOR_SPACING: float = 0.5  # Less spacing means the vectors will be closer packed together (more detail, hard to see)
+VERTICAL_VECTOR_MIN: float = -10
+VERTICAL_VECTOR_MAX: float = 10
 
 # Constants pertaining to drawing the continuous function
 FUNCTION_DETAIL: float = 0.001
@@ -42,6 +47,17 @@ if __name__ == "__main__":
     x_points: npt.NDArray[np.float64] = np.linspace(HORIZONTAL_GRAPH_MIN, HORIZONTAL_GRAPH_MAX, x_steps)
     y_points: npt.NDArray[np.float64] = main_function(x_points)
 
+    vector_steps: int = int(x_range/VECTOR_SPACING)
+    x_vector: npt.NDArray[np.float64] = np.linspace(HORIZONTAL_GRAPH_MIN, HORIZONTAL_GRAPH_MAX, vector_steps)
+    y_vector: npt.NDArray[np.float64] = np.linspace(VERTICAL_VECTOR_MIN, VERTICAL_VECTOR_MAX, vector_steps)
+    x_vector, y_vector = np.meshgrid(x_vector, y_vector)
+    dx_vector: npt.NDArray[np.float64] = y_vector
+    dy_vector: npt.NDArray[np.float64] = differential_eq(x_vector, y_vector)
+    m_vector: npt.NDArray[np.float64] = np.sqrt(dx_vector**2 + dy_vector**2)
+    d_vector: npt.NDArray[np.float64] = np.arctan2(dy_vector, dx_vector)
+    dx_vector = np.cos(d_vector)*VECTOR_SPACING
+    dy_vector = np.sin(d_vector)*VECTOR_SPACING
+
     fig, ax = plt.subplots()
     fig.canvas.manager.set_window_title("ZanderPeterson/ModelingPointsOnGraph-ODE")
     ax.plot(x_points, y_points, color="white")
@@ -51,7 +67,12 @@ if __name__ == "__main__":
     ax.grid(True, alpha=0.4)
 
     # Main loop
-    points, = plt.plot(0, 0, 'r')
+    a_points, = plt.plot(0, 0, 'r')
+    v_points, = plt.plot(0, 0, 'r')
+    vector_plot = plt.quiver(x_vector, y_vector, dx_vector, dy_vector, m_vector,
+                             cmap='viridis', angles='xy', scale_units='xy', scale=1)
+    colorbar = fig.colorbar(vector_plot)
+    time.sleep(1)  # Improves timing by giving the program a second to finish loading
     start_time_s: float = time.perf_counter()
     while plt.fignum_exists(fig.number):
         current_time_s: float = time.perf_counter()
@@ -66,7 +87,9 @@ if __name__ == "__main__":
             simulated_points[:, 0] += simulated_points[:, 1]*SIMULATION_TIME_STEP*SIMULATION_SPEED
             simulated_points[:, 1] += simulated_points[:, 2]*SIMULATION_TIME_STEP*SIMULATION_SPEED
 
-        points.remove()
-        points, = plt.plot(simulated_points[:, 0], main_function(simulated_points[:, 0]), 'ro')
+        a_points.remove()
+        v_points.remove()
+        a_points, = plt.plot(simulated_points[:, 0], main_function(simulated_points[:, 0]), 'ro')
+        v_points, = plt.plot(simulated_points[:, 0], simulated_points[:, 1], 'go')
         plt.pause(0.05)
     print("Figure closed")
